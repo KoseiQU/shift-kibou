@@ -1,0 +1,224 @@
+<title>シフト希望メーカー</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+/* layout: 1カラム。名前と日数 → 時間を選ぶ → カレンダーをタップ → 提出文コピー */
+:root{
+  --bg:#f3f5f4; --card:#ffffff; --fg:#1d2624; --mute:#66736f; --line:#d9e0dd;
+  --accent:#17675d; --accent-soft:#dcefeb; --sun:#c2413b; --sat:#2f5fa8; --off:#eef1f0;
+  --f-body:"Zen Kaku Gothic New","Hiragino Sans","Noto Sans JP",system-ui,sans-serif;
+  --f-num:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#121816; --card:#1a2220; --fg:#e4ebe8; --mute:#93a19c; --line:#2c3633;
+  --accent:#4fbfae; --accent-soft:#1d3a35; --sun:#f07c74; --sat:#7fa6e8; --off:#161d1b; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#121816; --card:#1a2220; --fg:#e4ebe8; --mute:#93a19c; --line:#2c3633;
+  --accent:#4fbfae; --accent-soft:#1d3a35; --sun:#f07c74; --sat:#7fa6e8; --off:#161d1b; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:15px;line-height:1.6;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 48px}
+.wrap{max-width:560px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
+h1{font-size:21px;margin:0}
+section{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:12px}
+.step{font-size:13px;color:var(--mute);font-weight:700;margin:0}
+.row{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:center}
+label{font-size:14px;display:flex;align-items:center;gap:6px}
+input,textarea,button{font:inherit;color:inherit}
+select{font:inherit;color:inherit;font-family:var(--f-num);background:var(--bg);border:1px solid var(--accent);border-radius:8px;padding:6px 8px}
+input,textarea{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:6px 8px}
+input[type=number]{width:3.8em;text-align:center;font-family:var(--f-num)}
+#name{flex:1;min-width:0}
+textarea{width:100%;min-height:52px;resize:vertical}
+button{cursor:pointer;border:1px solid var(--line);background:var(--card);border-radius:8px;padding:6px 12px}
+button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{font-family:var(--f-num);font-size:14px;padding:6px 12px;border-radius:999px}
+.chip[aria-pressed=true]{background:var(--accent);border-color:var(--accent);color:var(--card)}
+.note{font-size:12.5px;color:var(--mute);margin:0}
+
+.monthbar{display:flex;align-items:center;justify-content:space-between}
+.monthbar strong{font-size:18px;font-family:var(--f-num)}
+.cal{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}
+.dow{text-align:center;font-size:12px;color:var(--mute)}
+.dow.s0{color:var(--sun)} .dow.s6{color:var(--sat)}
+.day{aspect-ratio:1/1.1;max-width:100%;min-width:0;border-radius:8px;border:1px solid var(--line);background:var(--off);
+  display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:4px 1px;gap:1px}
+.day .d{font-family:var(--f-num);font-size:14px}
+.day.w0 .d{color:var(--sun)} .day.w6 .d{color:var(--sat)}
+.day .t{font-size:10px;line-height:1.2;color:var(--accent);font-family:var(--f-num);text-align:center;word-break:break-all}
+.day.on{background:var(--accent-soft);border-color:var(--accent)}
+.blank{visibility:hidden}
+
+pre#out{white-space:pre-wrap;word-break:break-word;background:var(--bg);border:1px dashed var(--line);border-radius:8px;
+  padding:12px;margin:0;font-family:var(--f-body);font-size:14px;line-height:1.7}
+.primary{background:var(--accent);color:var(--card);border-color:var(--accent);font-weight:700;padding:8px 16px}
+.toast{font-size:13px;color:var(--accent)}
+.total{margin:0;padding:10px 12px;border-radius:8px;background:var(--accent-soft);font-size:14px}
+.total b{font-family:var(--f-num);font-size:18px;color:var(--accent);font-variant-numeric:tabular-nums}
+.day .b{font-size:9.5px;line-height:1.1;color:var(--mute)}
+</style>
+
+<div class="wrap">
+  <h1>シフト希望メーカー</h1>
+
+  <section>
+    <p class="step">1. 名前と入りたい日数</p>
+    <label>名前 <input type="text" id="name" placeholder="例：山田"></label>
+    <label>月 <input type="number" id="minDays" min="0" max="31"> 〜 <input type="number" id="maxDays" min="0" max="31"> 日くらい入りたい</label>
+  </section>
+
+  <section>
+    <p class="step">2. 時間を選んで、出られる日をタップ</p>
+    <div class="chips" id="presets"></div>
+    <div class="row custom" id="customRow" hidden>
+      <select id="cFrom" aria-label="開始時刻"></select> 〜 <select id="cTo" aria-label="終了時刻"></select>
+    </div>
+    <div class="row" id="brkRow">
+      <label>休憩 <select id="brk"></select> 分</label>
+    </div>
+    <div class="monthbar">
+      <button id="prev" aria-label="前の月">‹</button>
+      <strong id="monthLabel"></strong>
+      <button id="next" aria-label="次の月">›</button>
+    </div>
+    <div class="cal" id="cal"></div>
+    <p class="note">もう一度タップで取り消し。時間や休憩を変えたい日は、変えてからもう一度タップ。</p>
+    <p class="total" id="total"></p>
+  </section>
+
+  <section>
+    <p class="step">3. 備考（任意）</p>
+    <textarea id="memo" placeholder="例：14日〜18日はテストのため入れません"></textarea>
+  </section>
+
+  <section>
+    <p class="step">4. コピーして送る</p>
+    <pre id="out"></pre>
+    <div class="row">
+      <button class="primary" id="copy">文面をコピー</button>
+      <button id="clearMonth">この月をクリア</button>
+      <span class="toast" id="toast" role="status"></span>
+    </div>
+  </section>
+</div>
+
+<script>
+(function(){
+const WD="日月火水木金土";
+const PRESETS=[
+  {k:"a",label:"11:00〜20:30"},
+  {k:"b",label:"15:00〜20:30"},
+  {k:"c",label:"16:00〜20:30"},
+  {k:"all",label:"何時でも"},
+  {k:"custom",label:"自由指定"},
+];
+const times=[];for(let t=6*60;t<=24*60;t+=30)times.push(Math.floor(t/60)+":"+String(t%60).padStart(2,"0"));
+const fmt=t=>t;
+/* 日ごとの値は時間の文字列（例 "11:00〜20:30"）。旧データ(a/b/c/all)も読める */
+const toLabel=v=>({a:"11:00〜20:30",b:"15:00〜20:30",c:"16:00〜20:30",all:"何時でも"})[v]||v;
+const mins=t=>{const [h,m]=t.split(":").map(Number);return h*60+m};
+const defBrk=v=>toLabel(v)==="11:00〜20:30"?90:0;
+const span=v=>{const p=toLabel(v).split("〜");return p.length===2?mins(p[1])-mins(p[0]):null};
+const hm=n=>Math.floor(n/60)+"時間"+(n%60?pad(n%60)+"分":"");
+const short=v=>{v=toLabel(v);if(v==="何時でも")return"終日";return v.replace(/:00/g,"").replace(/^0/,"").replace("〜0","〜").replace("〜","-")};
+const KEY="shift-kibou-v2";
+const $=id=>document.getElementById(id);
+const pad=n=>String(n).padStart(2,"0");
+const pd=k=>{const [y,m,d]=k.split("-").map(Number);return new Date(y,m-1,d)};
+const curLabel=()=>st.cur==="custom"?fmt(st.cFrom)+"〜"+fmt(st.cTo):(PRESETS.find(p=>p.k===st.cur)||PRESETS[0]).label;
+
+const nm=new Date();nm.setDate(1);nm.setMonth(nm.getMonth()+1);
+let st=null;
+try{st=JSON.parse(localStorage.getItem(KEY)||"null")}catch(e){}
+st=Object.assign({name:"",minDays:"",maxDays:"",memo:"",cur:"a",cFrom:"17:00",cTo:"20:30",curBrk:90,brk:{},ym:nm.getFullYear()+"-"+pad(nm.getMonth()+1),days:{}},st||{});
+
+st.brk=st.brk||{};
+if(st.curBrk===90&&st.cur!=="a"&&!Object.keys(st.brk).length)st.curBrk=0;
+const getBrk=key=>st.brk[key]!=null?st.brk[key]:defBrk(st.days[key]);
+function save(){try{localStorage.setItem(KEY,JSON.stringify(st))}catch(e){}}
+function ym(){const [y,m]=st.ym.split("-").map(Number);return{y,m}}
+
+function renderPresets(){
+  const el=$("presets");el.innerHTML="";
+  PRESETS.forEach(p=>{const b=document.createElement("button");b.className="chip";b.textContent=p.label;
+    b.setAttribute("aria-pressed",String(p.k===st.cur));b.onclick=()=>{st.cur=p.k;st.curBrk=p.k==="a"?90:0;save();renderPresets()};el.appendChild(b)});
+  $("customRow").hidden=st.cur!=="custom";
+  $("brkRow").hidden=st.cur==="all";
+  $("brk").value=String(st.curBrk);
+  $("cFrom").value=st.cFrom;$("cTo").value=st.cTo;
+}
+
+function renderCal(){
+  const {y,m}=ym();
+  $("monthLabel").textContent=y+"年"+m+"月";
+  const cal=$("cal");cal.innerHTML="";
+  for(let i=0;i<7;i++){const d=document.createElement("div");d.className="dow s"+i;d.textContent=WD[i];cal.appendChild(d)}
+  const first=new Date(y,m-1,1).getDay(), n=new Date(y,m,0).getDate();
+  for(let i=0;i<first;i++){const b=document.createElement("div");b.className="day blank";cal.appendChild(b)}
+  for(let d=1;d<=n;d++){
+    const key=st.ym+"-"+pad(d), k=st.days[key], w=(first+d-1)%7;
+    const b=document.createElement("button");
+    b.className="day w"+w+(k?" on":"");
+    b.setAttribute("aria-label",m+"月"+d+"日 "+(k?toLabel(k):"未選択"));
+    const bk=k?getBrk(key):0;
+    b.innerHTML='<span class="d">'+d+'</span>'+(k?'<span class="t">'+short(k)+'</span>':'')+(bk?'<span class="b">休'+bk+'</span>':'');
+    b.onclick=()=>{
+      const v=curLabel(), nb=st.cur==="all"?0:Number(st.curBrk);
+      if(toLabel(st.days[key])===v&&getBrk(key)===nb){delete st.days[key];delete st.brk[key]}
+      else{st.days[key]=v;st.brk[key]=nb}
+      save();render();
+    };
+    cal.appendChild(b);
+  }
+}
+
+function buildText(){
+  const {m}=ym();
+  const keys=Object.keys(st.days).filter(k=>k.startsWith(st.ym+"-")).sort();
+  const L=["【"+m+"月 シフト希望】"+st.name,"下記は出勤「可能」な日です。この中から選んでいただけると助かります。"];
+  const mn=st.minDays,mx=st.maxDays;
+  const amt=mn&&mx?(mn===mx?mn+"日":mn+"〜"+mx+"日"):mx?mx+"日まで":mn?mn+"日以上":"";
+  if(amt)L.push("希望日数：月"+amt+"程度");
+  L.push("");
+  keys.forEach(k=>{const dt=pd(k);L.push((dt.getMonth()+1)+"/"+dt.getDate()+"("+WD[dt.getDay()]+") "+toLabel(st.days[k])+(getBrk(k)?"（休憩"+getBrk(k)+"分）":""))});
+  if(!keys.length)L.push("（まだ選ばれていません）");
+  L.push("","可能日 計"+keys.length+"日");
+  if(st.memo.trim())L.push("","備考："+st.memo.trim());
+  L.push("よろしくお願いします。");
+  return L.join("\n");
+}
+
+function renderTotal(){
+  const keys=Object.keys(st.days).filter(k=>k.startsWith(st.ym+"-"));
+  let sum=0,anytime=0;
+  keys.forEach(k=>{const s=span(st.days[k]);if(s==null)anytime++;else sum+=Math.max(0,s-getBrk(k))});
+  $("total").innerHTML="この月の勤務時間（休憩除く）：<b>"+hm(sum)+"</b>　"+keys.length+"日分"+
+    (anytime?"<br><span class=\"note\">「何時でも」の"+anytime+"日は時間が決まらないため含めていません</span>":"");
+}
+function render(){renderPresets();renderCal();renderTotal();$("out").textContent=buildText()}
+
+["name","minDays","maxDays","memo"].forEach(k=>{$(k).value=st[k]||"";
+  $(k).addEventListener("input",e=>{st[k]=e.target.value;save();$("out").textContent=buildText()})});
+times.forEach(t=>["cFrom","cTo"].forEach(id=>{const o=document.createElement("option");o.value=o.textContent=t;$(id).appendChild(o)}));
+[0,15,30,45,60,75,90,105,120].forEach(n=>{const o=document.createElement("option");o.value=String(n);o.textContent=n;$("brk").appendChild(o)});
+$("brk").onchange=e=>{st.curBrk=Number(e.target.value);save()};
+$("cFrom").onchange=e=>{st.cFrom=e.target.value;if(mins(st.cTo)<=mins(st.cFrom))st.cTo=times[Math.min(times.indexOf(st.cFrom)+1,times.length-1)];save();renderPresets()};
+$("cTo").onchange=e=>{st.cTo=e.target.value;if(mins(st.cTo)<=mins(st.cFrom))st.cFrom=times[Math.max(times.indexOf(st.cTo)-1,0)];save();renderPresets()};
+function shift(n){const {y,m}=ym();const d=new Date(y,m-1+n,1);st.ym=d.getFullYear()+"-"+pad(d.getMonth()+1);save();render()}
+$("prev").onclick=()=>shift(-1);$("next").onclick=()=>shift(1);
+let armed=false;
+$("clearMonth").onclick=e=>{
+  if(!armed){armed=true;e.target.textContent="本当にクリア";setTimeout(()=>{armed=false;e.target.textContent="この月をクリア"},3000);return}
+  armed=false;e.target.textContent="この月をクリア";
+  Object.keys(st.days).forEach(k=>{if(k.startsWith(st.ym+"-"))delete st.days[k]});save();render()};
+$("copy").onclick=()=>{
+  const t=$("out").textContent;
+  const ok=()=>{$("toast").textContent="コピーしました";setTimeout(()=>$("toast").textContent="",2000)};
+  const fb=()=>{const r=document.createRange();r.selectNodeContents($("out"));const s=getSelection();s.removeAllRanges();s.addRange(r);
+    $("toast").textContent="選択しました。長押しでコピーしてください"};
+  try{navigator.clipboard.writeText(t).then(ok,fb)}catch(e){fb()}
+};
+render();
+})();
+</script>
